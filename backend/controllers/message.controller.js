@@ -1,5 +1,6 @@
 import Conversation from "../models/conversation.model.js"
 import Message from "../models/message.model.js"
+import User from "../models/user.model.js"
 
 
 export const sendMessage = async (req, res) => {
@@ -28,9 +29,12 @@ export const sendMessage = async (req, res) => {
             conversation.messages.push(newMessage._id)
         }
 
+        // Socket IO functionality later
+
+
         // await conversation.save()
         // await newMessage.save()
-        
+
         // Promise makes them run in parallel 
         await Promise.all([conversation.save(), newMessage.save()])
 
@@ -42,3 +46,25 @@ export const sendMessage = async (req, res) => {
     }
 }
 
+export const getMessages = async (req, res) => {
+    try {
+
+        const { id: userToChatId } = req.params
+        const senderId = req.user._id
+        const conversation = await Conversation.findOne({
+            participants: { $all: [senderId, userToChatId] }
+        }).populate("messages")  //Not references but shows the actual messages one by one
+
+        if (!conversation) {
+            return res.status(200).json([])
+        }
+
+        const messages = conversation.messages
+
+        res.status(200).json(messages)
+
+    } catch (error) {
+        console.log("Error in getMessages controller", error.message)
+        res.status(500).json({ error: "Internal server error" })
+    }
+}
